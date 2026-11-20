@@ -1,0 +1,32 @@
+{
+  "_comment": "Captured on the reference rig. CoordinateMapper in scaling.py rescales these for any other client size or DPI.",
+  "reference_client": {
+    "width": 800,
+    "height": 600
+  },
+  "reference_screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "reference_dpi": 96,
+  "captured_client": {
+    "width": 800,
+    "height": 599
+  },
+  "targets": {
+    "pet_select": {
+      "x": 182,
+      "y": 220
+    },
+    "mutate": {
+      "x": 535,
+      "y": 384
+    }
+  },
+  "scan_region": {
+    "x": 176,
+    "y": 114,
+    "width": 426,
+    "height": 412
+  }
+}

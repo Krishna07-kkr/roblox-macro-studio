@@ -1,0 +1,187 @@
+{
+  "meta": {
+    "name": "Goliath 3-Slot Daycare Macro",
+    "description": "Sub-pixel calibrated plus centers for Arm Wrestle Simulator Goliath Machine",
+    "macro_mode": "goliath",
+    "machine_tag": "Local PC (800x600)"
+  },
+  "window_settings": {
+    "target_process_names": [
+      "robloxplayerbeta.exe",
+      "roblox.exe"
+    ],
+    "ignore_process_names": [
+      "roblox account manager.exe",
+      "chrome.exe",
+      "msedge.exe",
+      "brave.exe",
+      "firefox.exe"
+    ],
+    "auto_arrange_windows": true,
+    "auto_shrink_to_minimum": true,
+    "layout_style": "diagonal",
+    "diagonal_gap": 10,
+    "diagonal_offset_x": 10,
+    "diagonal_offset_y": 10,
+    "grid_columns": 2,
+    "standard_width": 800,
+    "standard_height": 600,
+    "use_window_relative_coords": true
+  },
+  "overall_scan_region": {
+    "x": 196,
+    "y": 178,
+    "width": 426,
+    "height": 246
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "Slot 1",
+      "slot_click": {
+        "x": 280,
+        "y": 300
+      },
+      "claim_click": {
+        "x": 280,
+        "y": 345
+      },
+      "scan_region": {
+        "x": 196,
+        "y": 178,
+        "width": 142,
+        "height": 246
+      }
+    },
+    {
+      "id": 2,
+      "name": "Slot 2",
+      "slot_click": {
+        "x": 406,
+        "y": 299
+      },
+      "claim_click": {
+        "x": 398,
+        "y": 345
+      },
+      "scan_region": {
+        "x": 338,
+        "y": 178,
+        "width": 142,
+        "height": 246
+      }
+    },
+    {
+      "id": 3,
+      "name": "Slot 3",
+      "slot_click": {
+        "x": 522,
+        "y": 317
+      },
+      "claim_click": {
+        "x": 524,
+        "y": 345
+      },
+      "scan_region": {
+        "x": 480,
+        "y": 178,
+        "width": 142,
+        "height": 246
+      }
+    }
+  ],
+  "common_actions": {
+    "pet_select": {
+      "x": 252,
+      "y": 269
+    },
+    "confirm_yes": {
+      "x": 329,
+      "y": 347
+    },
+    "cancel_no": {
+      "x": 248,
+      "y": 276
+    },
+    "modal_x": {
+      "x": 493,
+      "y": 388
+    }
+  },
+  "detection": {
+    "mode": "color_and_template",
+    "save_debug_screenshots": true,
+    "claim_green_hsv": {
+      "lower": [
+        35,
+        70,
+        70
+      ],
+      "upper": [
+        85,
+        255,
+        255
+      ],
+      "min_matching_pixels": 80
+    },
+    "empty_slot_hsv": {
+      "lower": [
+        0,
+        0,
+        50
+      ],
+      "upper": [
+        180,
+        50,
+        180
+      ],
+      "min_matching_pixels": 120
+    },
+    "ocr_claim_keywords": [
+      "CLAIM",
+      "COLLECT",
+      "READY",
+      "00:00",
+      "0S"
+    ],
+    "ocr_empty_keywords": [
+      "ADD",
+      "EMPTY",
+      "SELECT",
+      "+",
+      "EQUIP"
+    ]
+  },
+  "delays": {
+    "calm_mode": true,
+    "window_focus_delay": 0.6,
+    "click_delay": 0.35,
+    "after_claim_delay": 1.0,
+    "after_pet_select_delay": 0.5,
+    "after_confirm_delay": 0.6,
+    "between_slots_delay": 0.5,
+    "cycle_delay": 6.0,
+    "mutation_poll_delay": 6.0,
+    "ui_settle_delay": 0.25,
+    "after_slot_click_delay": 0.35
+  },
+  "hotkeys": {
+    "emergency_stop": "f6",
+    "fallback_stop": "escape",
+    "toggle_pause": "f7"
+  },
+  "ui": {
+    "show_floating_stop_button": true
+  },
+  "claim_schedule": {
+    "enabled": true,
+    "wait_minutes": 10.0,
+    "claim_on_timer": true
+  },
+  "slot_fill": {
+    "verify_all_slots": true,
+    "retries": 2,
+    "capture_failures": true,
+    "dismiss_popups": true
+  }
+}

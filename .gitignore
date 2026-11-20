@@ -1,0 +1,25 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Per-machine settings: holds the DPAPI-encrypted Discord webhook (FR-053)
+studio_settings.json
+
+# Generated
+graphify-out/
+build/
+dist/
+
+# Virtual environment (uv venv .venv)
+.venv/
+
+# Runtime output: captures, logs and claim-timer state (the audit found these growing
+# without limit; see specs/002-audit-hardening, finding H14/H16)
+debug_captures/
+proof_captures/
+debug_log.txt
+account_schedule.json
+
+# Your own recordings (key presses and screen pictures) stay on this PC
+recordings/
+.ruff_cache/

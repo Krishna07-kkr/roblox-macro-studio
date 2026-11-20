@@ -1,0 +1,39 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 110
+extend-exclude = ["build", "dist", "graphify-out", ".specify", ".claude", ".venv"]
+
+[tool.ruff.lint]
+# E/F: errors and unused names. B: likely bugs. BLE: blind excepts. RUF, SIM, UP, PERF:
+# correctness and efficiency. S: security (bandit rules; also run by bandit itself).
+select = ["E", "F", "B", "BLE", "RUF", "S", "PERF", "SIM", "UP"]
+ignore = [
+    "S101",    # assert is the point of a test
+    "S603",    # subprocess with an argument list is the approved pattern (no shell strings)
+    "S607",    # partial executable path (schtasks, explorer) is intentional
+    "UP015",   # open(..., "r") is explicit and harmless
+    "RUF001", "RUF002", "RUF003",   # the UI text uses typographic characters on purpose
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "BLE001", "PERF"]
+# Tool classes hold read-only class constants (page titles, setting defaults); RUF012 would make
+# every one a ClassVar annotation for no benefit.
+"macro_studio/tools/**" = ["RUF012"]
+
+[tool.pyright]
+include = ["macro_studio"]
+exclude = ["**/__pycache__", ".venv", "build", "dist"]
+pythonVersion = "3.12"
+pythonPlatform = "Windows"
+typeCheckingMode = "basic"
+reportMissingModuleSource = "none"
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "build", "dist", ".specify", ".claude"]
+# B404/B603/B607: subprocess with argument lists; reviewed in specs/002-audit-hardening.
+skips = ["B404", "B603", "B607"]

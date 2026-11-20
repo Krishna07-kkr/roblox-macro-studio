@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "name": "Pet Mutation Macro",
+    "description": "Multi-account automatic pet mutation loop for Arm Wrestle Simulator",
+    "macro_mode": "mutation",
+    "machine_tag": "Local PC (800x600)"
+  },
+  "window_settings": {
+    "target_process_names": [
+      "robloxplayerbeta.exe",
+      "roblox.exe"
+    ],
+    "ignore_process_names": [
+      "roblox account manager.exe",
+      "chrome.exe",
+      "msedge.exe",
+      "brave.exe",
+      "firefox.exe"
+    ],
+    "auto_arrange_windows": true,
+    "auto_shrink_to_minimum": true,
+    "layout_style": "diagonal",
+    "diagonal_gap": 10,
+    "diagonal_offset_x": 10,
+    "diagonal_offset_y": 10,
+    "grid_columns": 2,
+    "standard_width": 800,
+    "standard_height": 600,
+    "use_window_relative_coords": true
+  },
+  "reference_client": {
+    "width": 800,
+    "height": 600
+  },
+  "reference_screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "reference_dpi": 96,
+  "captured_client": {
+    "width": 800,
+    "height": 599
+  },
+  "targets": {
+    "pet_select": {
+      "x": 182,
+      "y": 220
+    },
+    "mutate": {
+      "x": 535,
+      "y": 384
+    }
+  },
+  "scan_region": {
+    "x": 176,
+    "y": 114,
+    "width": 426,
+    "height": 412
+  },
+  "delays": {
+    "calm_mode": true,
+    "window_focus_delay": 0.6,
+    "click_delay": 0.35,
+    "after_pet_select_delay": 0.35,
+    "after_mutate_delay": 0.6,
+    "mutation_poll_delay": 2.0,
+    "between_slots_delay": 0.35,
+    "cycle_delay": 2.0
+  },
+  "hotkeys": {
+    "emergency_stop": "f6",
+    "fallback_stop": "escape",
+    "toggle_pause": "f7"
+  },
+  "ui": {
+    "show_floating_stop_button": true
+  }
+}
