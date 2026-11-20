@@ -16,6 +16,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         Handler.seen.append((self.path, self.headers.get("User-Agent")))
         if self.path == "/big":
             body = b"x" * 5_000_000
+        elif self.path.startswith("/go-to?"):            # redirect to the address after "?"
+            self.send_response(302)
+            self.send_header("Location", self.path.split("?", 1)[1])
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         elif self.path == "/missing":
             self.send_response(404)
             self.end_headers()
@@ -59,6 +65,27 @@ def server():
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
     httpd.shutdown()
     httpd.server_close()
+
+
+def test_a_redirect_is_followed_only_to_an_allowed_host(server):
+    port = server.rsplit(":", 1)[1]
+    client = Http(allowed_hosts={"127.0.0.1", "localhost"},
+                  allow_http_for={"127.0.0.1", "localhost"})
+    assert json.loads(client.get(f"{server}/go-to?http://localhost:{port}/ok")) == {"name": "Ann"}
+    with pytest.raises(HttpError) as err:
+        client.get(f"{server}/go-to?http://evil.example/steal")
+    assert err.value.status == 302
+
+
+def test_a_download_goes_to_a_file_with_its_digest_and_respects_the_cap(server, tmp_path):
+    import hashlib
+    client = Http(allowed_hosts={"127.0.0.1"}, allow_http_for={"127.0.0.1"})
+    path = tmp_path / "file.bin"
+    size, sha = client.download(f"{server}/big", str(path), max_bytes=10_000_000)
+    assert size == 5_000_000 and sha == hashlib.sha256(b"x" * 5_000_000).hexdigest()
+    with pytest.raises(ValueError):
+        client.download(f"{server}/big", str(path), max_bytes=1000)
+    assert not path.exists(), "a refused download must not leave a file behind"
 
 
 def test_a_normal_reply_is_returned_as_text(server):

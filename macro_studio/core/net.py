@@ -6,15 +6,20 @@ follows redirects to somewhere else, and refuses a reply bigger than a limit. A 
 hostile URL fails here, before anything is sent.
 """
 
+import contextlib
+import hashlib
 import json
+import os
 import urllib.error
 import urllib.parse
 import urllib.request
 
+from macro_studio import __version__
+
 ROBLOX_HOSTS = frozenset({"users.roblox.com", "apis.roblox.com", "games.roblox.com"})
 DISCORD_HOSTS = frozenset({"discord.com", "discordapp.com", "ptb.discord.com", "canary.discord.com",
                            "ptb.discordapp.com", "canary.discordapp.com"})
-USER_AGENT = "MacroStudio/2.5"
+USER_AGENT = f"MacroStudio/{__version__}"
 DEFAULT_MAX_BYTES = 1_000_000
 
 
@@ -38,11 +43,20 @@ def _retry_after(error):
         return None
 
 
-class _NoRedirects(urllib.request.HTTPRedirectHandler):
-    """A redirect could send us to a host that was never allowed."""
+class _SafeRedirects(urllib.request.HTTPRedirectHandler):
+    """Follow a redirect only to an address the client would accept anyway (GitHub serves
+    release downloads from a second host); anything else is refused."""
+
+    def __init__(self, client):
+        super().__init__()
+        self._client = client
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
+        try:
+            self._client._check(newurl)
+        except ValueError:
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class Http:
@@ -50,7 +64,7 @@ class Http:
         self._allowed = {host.lower() for host in allowed_hosts}
         self._http_ok = {host.lower() for host in allow_http_for}     # for tests on localhost
         self._max_bytes = max_bytes
-        self._opener = urllib.request.build_opener(_NoRedirects)
+        self._opener = urllib.request.build_opener(_SafeRedirects(self))
 
     def _check(self, url):
         parts = urllib.parse.urlsplit(url)
@@ -95,3 +109,28 @@ class Http:
         except urllib.error.URLError as err:
             raise OSError(str(err.reason)) from err
         return answer[:self._max_bytes].decode("utf-8", errors="replace")
+
+    def download(self, url, path, max_bytes, timeout=30.0):
+        """Stream `url` into the file `path`; returns (size, sha256 hex). Same rules and errors as
+        get(); a reply over `max_bytes` raises ValueError. A failed download leaves no file."""
+        self._check(url)
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
+                                                       "Accept": "application/octet-stream"})
+        digest, size = hashlib.sha256(), 0
+        try:
+            with self._opener.open(request, timeout=timeout) as reply, open(path, "wb") as out:  # noqa: S310 - _check() allowed only https/known hosts
+                while chunk := reply.read(1 << 16):
+                    size += len(chunk)
+                    if size > max_bytes:
+                        raise ValueError("The download is too large.")
+                    digest.update(chunk)
+                    out.write(chunk)
+        except BaseException as err:
+            with contextlib.suppress(OSError):
+                os.remove(path)
+            if isinstance(err, urllib.error.HTTPError):
+                raise HttpError(err.code, _retry_after(err)) from err
+            if isinstance(err, urllib.error.URLError):
+                raise OSError(str(err.reason)) from err
+            raise
+        return size, digest.hexdigest()

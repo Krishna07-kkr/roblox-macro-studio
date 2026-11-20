@@ -146,9 +146,34 @@ def run():
     system.set_glass(True, "frosted")
     check("Frosted can be chosen and is remembered", system.settings.get("glass_style") == "frosted"
           and (system.btn_glass._text == "Frosted" or not glass_supported()), system.btn_glass._text)
-    system.set_glass(False, "soft")
-    check("and Off turns it off", system.settings.get("glass") is False
-          and (system.btn_glass._text == "Off" or not glass_supported()), system.btn_glass._text)
+    # Updates: off at start, a found release turns the button into "Update to ..."
+    from macro_studio.core import updater
+    check("checking for updates at start is off by default",
+          system.settings.get("check_updates") is False and system.var_updates.get() is False)
+    found = updater.Release("v9.0", (9, 0, 0), "https://github.com/x", 1, "")
+    system.updater = type("U", (), {"http_client": staticmethod(lambda: None),
+                                    "latest_release": staticmethod(lambda http: found),
+                                    "is_newer": staticmethod(updater.is_newer)})
+    system._check_job(ask=False)
+    root.update()
+    check("a newer release is offered", system.btn_update._text == "Update to v9.0"
+          and "v9.0 is available" in system.lbl_update.cget("text"), system.lbl_update.cget("text"))
+    system._update_clicked()
+    check("updating from source says to use git", "git pull" in system.lbl_update.cget("text"))
+
+    def offline(http):
+        raise OSError("no network")
+    system.updater.latest_release = staticmethod(offline)
+    system._check_job(ask=False)
+    root.update()
+    check("a failed check says why", "no network" in system.lbl_update.cget("text"),
+          system.lbl_update.cget("text"))
+
+    check("the Liquid Glass switch shows it on", system.var_glass.get() is glass_supported())
+    system.var_glass.set(False)
+    system._glass_changed()                       # what flipping the switch off does
+    check("and the switch turns it off, keeping the style", system.settings.get("glass") is False
+          and system.settings.get("glass_style") == "frosted")
     system.set_glass(True, "soft")
 
     # text size

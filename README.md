@@ -90,3 +90,16 @@ fixes the leaks, stalls and safety gaps found in the audit and comes first.
 
 Running several clients at once and automating clicks can break Roblox's Terms of Use and may
 lead to account action. You use this at your own risk.
+
+## Releasing a new version
+
+The studio can update itself from this repo's GitHub Releases (System > Updates; the check at
+start is off until you turn it on).
+
+1. Raise `__version__` in `macro_studio/__init__.py` (for example `2.7`).
+2. Build: `.venv\Scripts\python.exe build_exe.py`
+3. Publish the exe under a tag that matches the version:
+   `gh release create v2.7 dist\RobloxMacroStudio.exe --title "Macro Studio 2.7" --notes "What changed"`
+
+The asset must be named `RobloxMacroStudio.exe`. The app checks its size and the sha256 digest
+GitHub publishes before it swaps the exe, and refuses to update while a macro is running.

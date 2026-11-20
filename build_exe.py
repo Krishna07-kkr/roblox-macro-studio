@@ -8,10 +8,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.join(BASE_DIR, "dist")
 BUILD_DIR = os.path.join(BASE_DIR, "build")
 RELEASE_DIR = os.path.join(DIST_DIR, "RobloxMacroStudio_Release")
-ZIP_PATH = os.path.join(DIST_DIR, "RobloxMacroStudio_v2.5.zip")
+from macro_studio import __version__  # noqa: E402
+
+ZIP_PATH = os.path.join(DIST_DIR, f"RobloxMacroStudio_v{__version__}.zip")
 
 README_TEXT = """========================================================================
-ROBLOX MACRO STUDIO (STANDALONE V2.5)
+ROBLOX MACRO STUDIO (STANDALONE V{version})
 ARM WRESTLE SIMULATOR - GOLIATH DAYCARE & PET MUTATION
 ========================================================================
 
@@ -124,7 +126,7 @@ def package_release():
             shutil.copy2(os.path.join(BASE_DIR, "profiles", f), os.path.join(release_profiles, f))
 
     with open(os.path.join(RELEASE_DIR, "README.txt"), "w", encoding="utf-8") as f:
-        f.write(README_TEXT)
+        f.write(README_TEXT.replace("{version}", __version__))
 
     assert_no_private_files(RELEASE_DIR)
 

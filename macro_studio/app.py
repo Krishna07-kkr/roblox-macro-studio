@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from tkinter import font as tkfont
 from typing import Callable
 
-from macro_studio import registry
+from macro_studio import __version__, registry
 from macro_studio.calibrators.launch import (  # noqa: F401 - re-exported for app_gui users
     CALIBRATOR_SCRIPTS, calibrator_command, calibrator_from_argv, run_calibrator,
 )
@@ -245,7 +245,7 @@ class StudioShell:
         foot.pack(side="bottom", fill="x", padx=SP_MD + SP_XS, pady=SP_MD)
         tk.Label(foot, text="Killswitch  F6 / ESC", font=ui.F_EYEBROW(),
                  bg=CANVAS, fg=ERROR, anchor="w").pack(fill="x")
-        tk.Label(foot, text="v2.5  Vision Engine", font=ui.F_EYEBROW(),
+        tk.Label(foot, text=f"v{__version__}  Vision Engine", font=ui.F_EYEBROW(),
                  bg=CANVAS, fg=MUTE, anchor="w").pack(fill="x", pady=(2, 0))
 
     def _build_topbar(self):

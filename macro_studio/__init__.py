@@ -7,3 +7,5 @@ Layout (see specs/001-modular-multitool/plan.md):
     calibrators/  coordinate pickers, each runnable as its own process
     tools/        one folder per feature; registered in registry.py
 """
+
+__version__ = "2.6"

@@ -5,9 +5,14 @@ never to F6, F7 or Esc (the stop and pause keys) and never to a key another acti
 "Start with Windows" is a per-user startup entry; it needs no administrator rights.
 """
 
+import os
+import sys
 import tkinter as tk
+from tkinter import messagebox
 
+from macro_studio import __version__
 from macro_studio.core import autostart as autostart_mod
+from macro_studio.core import updater as updater_mod
 from macro_studio.core import ui_theme as ui
 from macro_studio.core.glass import DEFAULT_STYLE, apply_window_look, glass_supported
 from macro_studio.core.tray import TrayIcon
@@ -37,16 +42,21 @@ from macro_studio.tools.system.service import (
 )
 
 
+UPDATE_JOB = "system:update"
+
+
 class SystemTool:
     page_titles = ["System"]
     DEFAULTS = {"hotkeys": {}, "always_on_top": False, "start_minimised": False, "text_scale": 125,
                 "text_scale_chosen": False, "glass": True, "glass_style": DEFAULT_STYLE,
-                "close_to_tray": True}
+                "close_to_tray": True, "check_updates": False}
 
-    def __init__(self, shell, ctx, autostart=autostart_mod):
+    def __init__(self, shell, ctx, autostart=autostart_mod, updater=updater_mod):
         self.shell, self.ctx, self.root = shell, ctx, shell.root
         self.settings = ctx.settings.view("system", self.DEFAULTS)
         self.autostart = autostart
+        self.updater = updater
+        self.release = None
         self.bindings = HotkeyBindings(ctx.hotkeys, lambda: dict(ctx.actions))
         self.fields = {}
         self.tray = None
@@ -60,6 +70,10 @@ class SystemTool:
             self.ctx.log(f"[SYSTEM] The saved key for '{LABELS[action]}' could not be used: {why}")
         self.root.attributes("-topmost", bool(self.settings.get("always_on_top")))
         self._start_tray()
+        if getattr(sys, "frozen", False):            # only the exe can be updated in place
+            self.updater.remove_leftover(sys.executable)
+            if self.settings.get("check_updates"):
+                self.check_updates(ask=True)
         if self.settings.get("start_minimised"):
             # With a tray icon the window can go out of sight; without one it only minimises,
             # so the window is never lost.
@@ -152,7 +166,10 @@ class SystemTool:
                                     bool(self.settings.get("start_minimised")), self._min_changed)
         self.var_tray = self._toggle(window.body, "Closing the window hides it to the tray",
                                      bool(self.settings.get("close_to_tray")), self._tray_changed)
-        self.btn_glass = self._row(window.body, "Liquid Glass", lambda row: Button(
+        self.var_glass = self._toggle(window.body, "Liquid Glass",
+                                      bool(self.settings.get("glass")) and glass_supported(),
+                                      self._glass_changed)
+        self.btn_glass = self._row(window.body, "Glass style", lambda row: Button(
             row, "", command=self._pick_glass, kind="secondary", height=28, page_bg=SURFACE))
         self._glass_text()
         self.btn_scale = self._row(window.body, "Text size", lambda row: Button(
@@ -162,28 +179,43 @@ class SystemTool:
                                    fg=ERROR_TEXT, anchor="w", justify="left", wraplength=640)
         self.lbl_window.pack(fill="x", pady=(SP_SM, 0))
 
-    GLASS_CHOICES = (("Off", False, DEFAULT_STYLE), ("Soft", True, "soft"),
-                     ("Frosted (see-through)", True, "frosted"))
+        updates = Card(page, radius=R_LG, padding=(SP_MD, SP_MD), page_bg=CANVAS)
+        updates.pack(fill="x", padx=SP_XL, pady=SP_SM)
+        ui.heading(updates.body, "Updates", size=15).pack(anchor="w", pady=(0, SP_SM))
+        self.var_updates = self._toggle(updates.body, "Check for updates when the studio starts",
+                                        bool(self.settings.get("check_updates")),
+                                        self._updates_changed)
+        self.btn_update = self._row(updates.body, f"Version {__version__}", lambda row: Button(
+            row, "Check now", command=self._update_clicked, kind="secondary", height=28,
+            page_bg=SURFACE))
+        self.lbl_update = ui.caption(updates.body, "New versions come from the project's GitHub "
+                                                   "Releases and are checked before they are used.")
+        self.lbl_update.pack(fill="x", pady=(SP_SM, 0))
+
+    GLASS_CHOICES = (("Soft", "soft"), ("Frosted (see-through)", "frosted"))
 
     def _glass_label(self):
         if not glass_supported():
             return "Needs Windows 11 22H2"
-        if not self.settings.get("glass"):
-            return "Off"
         return "Frosted" if self.settings.get("glass_style") == "frosted" else "Soft"
 
     def _glass_text(self):
         self.btn_glass.set_text(self._glass_label())
 
+    def _glass_changed(self):
+        self.set_glass(bool(self.var_glass.get()), self.settings.get("glass_style"))
+
     def _pick_glass(self):
+        """Choosing a style also turns the glass on."""
         menu = tk.Menu(self.root, tearoff=0)
-        for label, on, style in self.GLASS_CHOICES:
-            menu.add_command(label=label, command=lambda o=on, s=style: self.set_glass(o, s))
+        for label, style in self.GLASS_CHOICES:
+            menu.add_command(label=label, command=lambda s=style: self.set_glass(True, s))
         menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
 
     def set_glass(self, on, style):
         """Switch the translucent window look right away (Off, Soft or Frosted)."""
         if on and not glass_supported():
+            self.var_glass.set(False)
             self.lbl_window.config(text="Liquid Glass needs Windows 11 version 22H2 or newer.",
                                    fg=ERROR_TEXT)
             return
@@ -191,6 +223,7 @@ class SystemTool:
         self.settings.set("glass_style", style)
         self.ctx.settings.save()
         apply_window_look(self.root, bool(on), style)
+        self.var_glass.set(bool(on))
         self.lbl_window.config(text="", fg=BODY)
         self._glass_text()
 
@@ -261,6 +294,86 @@ class SystemTool:
     def _tray_changed(self):
         self.settings.set("close_to_tray", bool(self.var_tray.get()))
         self.ctx.settings.save()
+
+    # ------------------------------------------------------------ updates
+    def _updates_changed(self):
+        self.settings.set("check_updates", bool(self.var_updates.get()))
+        self.ctx.settings.save()
+
+    def _update_status(self, text, error=False):
+        if hasattr(self, "lbl_update"):
+            self.lbl_update.config(text=text, fg=ERROR_TEXT if error else BODY)
+
+    def _update_clicked(self):
+        if self.release is not None:
+            self.start_update()
+        else:
+            self.check_updates(ask=False)
+
+    def check_updates(self, ask):
+        """Look for a newer release on a worker; `ask` pops a question when one is found."""
+        self._update_status("Checking for updates...")
+        self.ctx.scheduler.add(UPDATE_JOB, lambda: self._check_job(ask), 0, run_now=True,
+                               isolated=True, once=True)
+
+    def _check_job(self, ask):
+        try:
+            release = self.updater.latest_release(self.updater.http_client())
+        except (OSError, ValueError) as err:
+            text = f"Could not check for updates: {err}"
+            self.ctx.ui_call(lambda: self._update_status(text, error=True))
+            return
+        if not self.updater.is_newer(release):
+            self.ctx.ui_call(lambda: self._update_status(
+                f"You have the latest version ({__version__})."))
+            return
+        self.ctx.ui_call(lambda: self._offer_update(release, ask))
+
+    def _offer_update(self, release, ask):
+        self.release = release
+        self.btn_update.set_text(f"Update to {release.tag}")
+        self._update_status(f"Version {release.tag} is available (you have {__version__}).")
+        self.ctx.log(f"[UPDATE] Version {release.tag} is available. System > Updates installs it.")
+        if ask and messagebox.askyesno(
+                "Update available", f"Macro Studio {release.tag} is available (you have "
+                                    f"{__version__}).\n\nUpdate now? The studio restarts."):
+            self.start_update()
+
+    def start_update(self):
+        release = self.release
+        if release is None:
+            return
+        if not getattr(sys, "frozen", False):
+            self._update_status("Running from source: get the new version with git pull.")
+            return
+        if self.ctx.automation.owner is not None:
+            self._update_status("Stop the running macro first, then update.", error=True)
+            return
+        self._update_status(f"Downloading {release.tag}...")
+        folder = os.path.dirname(sys.executable)
+
+        def job():
+            try:
+                path = self.updater.download(self.updater.http_client(), release, folder)
+            except (OSError, ValueError) as err:
+                text = f"Download failed: {err}"
+                self.ctx.ui_call(lambda: self._update_status(text, error=True))
+                return
+            self.ctx.ui_call(lambda: self._install(path, release))
+        self.ctx.scheduler.add(UPDATE_JOB, job, 0, run_now=True, isolated=True, once=True)
+
+    def _install(self, path, release):
+        if self.ctx.automation.owner is not None:      # a macro started during the download
+            self._update_status("Stop the running macro first, then update.", error=True)
+            return
+        try:
+            self.updater.install(path, sys.executable)
+            self.updater.restart(sys.executable)
+        except OSError as err:
+            self._update_status(f"Could not install the update: {err}", error=True)
+            return
+        self.ctx.log(f"[UPDATE] Installed {release.tag}; restarting.")
+        self.shell.quit_now()
 
     def _pick_scale(self):
         menu = tk.Menu(self.root, tearoff=0)
