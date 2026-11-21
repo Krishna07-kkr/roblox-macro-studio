@@ -62,6 +62,9 @@ class FakeWM:
     def _note(self, name, *args):
         self.calls.append((name, args))
 
+    def is_minimized(self, hwnd):
+        return bool(self.windows.get(hwnd, {}).get("minimized"))
+
     def find_windows(self, include_minimized=False):
         self._note("find_windows")
         if self.enum_delay:
